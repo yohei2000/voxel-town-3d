@@ -20,6 +20,7 @@ npm.cmd run dev
 
 - `W/S`: 前進/後退
 - `A/D`: 視点回転
+- モバイル: 右下のスティックで前進/後退/旋回
 - `R`: リセット
 
 ## Texture Prompt

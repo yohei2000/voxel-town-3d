@@ -139,15 +139,82 @@ body {
   outline-offset: 2px;
 }
 
+.mobile-stick {
+  --stick-x: 0px;
+  --stick-y: 0px;
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 5;
+  width: 122px;
+  height: 122px;
+  display: none;
+  border: 1px solid rgb(255 255 255 / 52%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgb(255 253 246 / 48%) 0 31%, transparent 32%),
+    rgb(34 62 51 / 28%);
+  box-shadow: 0 16px 34px rgb(15 36 29 / 24%);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  backdrop-filter: blur(8px);
+}
+
+.mobile-stick::before,
+.mobile-stick::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: block;
+  background: rgb(255 255 255 / 42%);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.mobile-stick::before {
+  width: 74px;
+  height: 2px;
+}
+
+.mobile-stick::after {
+  width: 2px;
+  height: 74px;
+}
+
+.mobile-stick__knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgb(255 255 255 / 64%);
+  border-radius: 50%;
+  background: rgb(255 253 246 / 86%);
+  box-shadow: 0 9px 20px rgb(20 49 39 / 24%);
+  transform: translate(-50%, -50%) translate(var(--stick-x), var(--stick-y));
+}
+
+.mobile-stick.is-active .mobile-stick__knob {
+  background: #dcecc8;
+}
+
 body.is-visible .view-label-left,
 body.is-caught .view-label-left {
   background: rgb(255 231 218 / 88%);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px), (pointer: coarse) {
+  .mobile-stick {
+    display: block;
+  }
+
   .hud {
+    top: 56px;
+    bottom: auto;
     grid-template-columns: 1fr;
     gap: 8px;
+    width: min(360px, calc(100vw - 24px));
+    padding: 8px;
   }
 
   .readouts {

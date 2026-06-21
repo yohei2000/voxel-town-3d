@@ -123,6 +123,11 @@ let hiderAiRetargetAt = 0;
 let hiderAiTarget = new THREE.Vector3();
 let audioContext: AudioContext | null = null;
 let lastFootstepAt = 0;
+const joystickInput = {
+  x: 0,
+  y: 0,
+  pointerId: null as number | null
+};
 
 const dom = {
   role: document.querySelector<HTMLElement>('#role-readout'),
@@ -131,7 +136,9 @@ const dom = {
   footstep: document.querySelector<HTMLElement>('#footstep-bar'),
   sight: document.querySelector<HTMLElement>('#sight-bar'),
   distance: document.querySelector<HTMLElement>('#distance-readout'),
-  resetButton: document.querySelector<HTMLButtonElement>('#reset-round')
+  resetButton: document.querySelector<HTMLButtonElement>('#reset-round'),
+  moveStick: document.querySelector<HTMLElement>('#move-stick'),
+  moveStickKnob: document.querySelector<HTMLElement>('#move-stick-knob')
 };
 
 const hidingSpots = [
@@ -679,8 +686,10 @@ function resetRound() {
 }
 
 function updateControlledActor(actor: Actor, dt: number) {
-  const forward = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
-  const turn = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
+  const keyboardForward = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
+  const keyboardTurn = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
+  const forward = THREE.MathUtils.clamp(keyboardForward + joystickInput.y, -1, 1);
+  const turn = THREE.MathUtils.clamp(keyboardTurn + joystickInput.x, -1, 1);
   actor.yaw += turn * actor.turnSpeed * dt;
   const movement = forwardFromYaw(actor.yaw).multiplyScalar(forward * actor.speed * dt);
   tryMoveActor(actor, movement);
@@ -849,6 +858,60 @@ window.addEventListener('keyup', (event) => {
 dom.resetButton?.addEventListener('click', () => {
   ensureAudio();
   if (ready) resetRound();
+});
+
+function setJoystickVisual(x: number, y: number) {
+  dom.moveStick?.style.setProperty('--stick-x', `${x}px`);
+  dom.moveStick?.style.setProperty('--stick-y', `${y}px`);
+}
+
+function resetJoystick() {
+  joystickInput.x = 0;
+  joystickInput.y = 0;
+  joystickInput.pointerId = null;
+  dom.moveStick?.classList.remove('is-active');
+  setJoystickVisual(0, 0);
+}
+
+function updateJoystick(event: PointerEvent) {
+  if (!dom.moveStick) {
+    return;
+  }
+  const maxDistance = 44;
+  const deadzone = 0.12;
+  const rect = dom.moveStick.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const rawX = event.clientX - centerX;
+  const rawY = event.clientY - centerY;
+  const distance = Math.hypot(rawX, rawY);
+  const scale = distance > 0 ? Math.min(1, distance / maxDistance) : 0;
+  const normalizedX = distance > 0 ? (rawX / distance) * scale : 0;
+  const normalizedY = distance > 0 ? (rawY / distance) * scale : 0;
+  joystickInput.x = Math.abs(normalizedX) < deadzone ? 0 : normalizedX;
+  joystickInput.y = Math.abs(normalizedY) < deadzone ? 0 : -normalizedY;
+  setJoystickVisual(normalizedX * maxDistance, normalizedY * maxDistance);
+}
+
+dom.moveStick?.addEventListener('pointerdown', (event) => {
+  ensureAudio();
+  event.preventDefault();
+  joystickInput.pointerId = event.pointerId;
+  dom.moveStick?.setPointerCapture(event.pointerId);
+  dom.moveStick?.classList.add('is-active');
+  updateJoystick(event);
+});
+
+dom.moveStick?.addEventListener('pointermove', (event) => {
+  if (joystickInput.pointerId !== event.pointerId) {
+    return;
+  }
+  event.preventDefault();
+  updateJoystick(event);
+});
+
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach((eventName) => {
+  dom.moveStick?.addEventListener(eventName, resetJoystick);
 });
 
 window.addEventListener('resize', () => {
