@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>Voxel Town 3D</title>
+  </head>
+  <body>
+    <canvas id="town-canvas" aria-label="Low-poly voxel town model"></canvas>
+    <div class="view-label view-label-left">鬼視点</div>
+    <div class="view-label view-label-right">隠れる側視点</div>
+    <div class="split-divider" aria-hidden="true"></div>
+    <div class="hud" aria-live="polite">
+      <div class="readouts">
+        <span id="role-readout">鬼</span>
+        <span id="timer-readout">0s</span>
+        <span id="distance-readout">0.0m</span>
+        <span id="state-readout">探索中</span>
+      </div>
+      <div class="meter-row">
+        <span>足音</span>
+        <div class="meter"><i id="footstep-bar"></i></div>
+      </div>
+      <div class="meter-row">
+        <span>視界</span>
+        <div class="meter meter-danger"><i id="sight-bar"></i></div>
+      </div>
+      <div class="role-buttons">
+        <button id="role-seeker" type="button">鬼</button>
+        <button id="role-hider" type="button">隠</button>
+        <button id="reset-round" type="button">↺</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
