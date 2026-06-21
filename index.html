@@ -9,8 +9,6 @@
   <body>
     <canvas id="town-canvas" aria-label="Low-poly voxel town model"></canvas>
     <div class="view-label view-label-left">鬼視点</div>
-    <div class="view-label view-label-right">隠れる側視点</div>
-    <div class="split-divider" aria-hidden="true"></div>
     <div class="hud" aria-live="polite">
       <div class="readouts">
         <span id="role-readout">鬼</span>
@@ -27,9 +25,7 @@
         <div class="meter meter-danger"><i id="sight-bar"></i></div>
       </div>
       <div class="role-buttons">
-        <button id="role-seeker" type="button">鬼</button>
-        <button id="role-hider" type="button">隠</button>
-        <button id="reset-round" type="button">↺</button>
+        <button id="reset-round" type="button" aria-label="ラウンドをリセット">↺</button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

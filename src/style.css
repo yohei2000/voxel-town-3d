@@ -20,18 +20,6 @@ body {
   outline: none;
 }
 
-.split-divider {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 2px;
-  background: rgb(255 255 255 / 58%);
-  box-shadow: 0 0 18px rgb(0 0 0 / 18%);
-  transform: translateX(-1px);
-  pointer-events: none;
-}
-
 .view-label {
   position: fixed;
   top: 14px;
@@ -52,10 +40,6 @@ body {
 
 .view-label-left {
   left: 14px;
-}
-
-.view-label-right {
-  right: 14px;
 }
 
 .hud {
@@ -158,11 +142,6 @@ body {
 body.is-visible .view-label-left,
 body.is-caught .view-label-left {
   background: rgb(255 231 218 / 88%);
-}
-
-body.is-visible .view-label-right,
-body.is-caught .view-label-right {
-  background: rgb(255 239 214 / 88%);
 }
 
 @media (max-width: 720px) {

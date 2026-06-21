@@ -92,7 +92,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const seekerCamera = new THREE.PerspectiveCamera(66, 1, 0.1, 90);
-const hiderCamera = new THREE.PerspectiveCamera(66, 1, 0.1, 90);
 
 const sun = new THREE.DirectionalLight(0xfff3cf, 3.25);
 sun.position.set(-26, 34, 24);
@@ -116,14 +115,12 @@ const clock = new THREE.Clock();
 let seeker!: Actor;
 let hider!: Actor;
 let visionCone!: THREE.Mesh;
-let activeRole: Role = 'seeker';
 let elapsed = 0;
 let spottedTime = 0;
 let caught = false;
 let ready = false;
 let hiderAiRetargetAt = 0;
 let hiderAiTarget = new THREE.Vector3();
-let seekerPatrolIndex = 0;
 let audioContext: AudioContext | null = null;
 let lastFootstepAt = 0;
 
@@ -134,8 +131,6 @@ const dom = {
   footstep: document.querySelector<HTMLElement>('#footstep-bar'),
   sight: document.querySelector<HTMLElement>('#sight-bar'),
   distance: document.querySelector<HTMLElement>('#distance-readout'),
-  seekerButton: document.querySelector<HTMLButtonElement>('#role-seeker'),
-  hiderButton: document.querySelector<HTMLButtonElement>('#role-hider'),
   resetButton: document.querySelector<HTMLButtonElement>('#reset-round')
 };
 
@@ -148,16 +143,6 @@ const hidingSpots = [
   new THREE.Vector3(33, 0, -18),
   new THREE.Vector3(2, 0, -25),
   new THREE.Vector3(-23, 0, -2)
-];
-
-const seekerPatrol = [
-  new THREE.Vector3(-30, 0, -22),
-  new THREE.Vector3(-6, 0, -20),
-  new THREE.Vector3(23, 0, -17),
-  new THREE.Vector3(29, 0, 12),
-  new THREE.Vector3(8, 0, 22),
-  new THREE.Vector3(-20, 0, 14),
-  new THREE.Vector3(-33, 0, 2)
 ];
 
 function imageFromUrl(url: string): Promise<HTMLImageElement> {
@@ -691,32 +676,14 @@ function resetRound() {
   hider.position.set(9, 0, 22.5);
   hider.yaw = -0.35;
   hiderAiTarget.copy(hidingSpots[0]);
-  seekerPatrolIndex = 0;
-}
-
-function setActiveRole(role: Role) {
-  activeRole = role;
-  dom.seekerButton?.classList.toggle('is-active', role === 'seeker');
-  dom.hiderButton?.classList.toggle('is-active', role === 'hider');
 }
 
 function updateControlledActor(actor: Actor, dt: number) {
   const forward = Number(keys.has('w') || keys.has('arrowup')) - Number(keys.has('s') || keys.has('arrowdown'));
   const turn = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
   actor.yaw += turn * actor.turnSpeed * dt;
-  const speedBoost = activeRole === 'hider' && keys.has('shift') ? 1.08 : 1;
-  const movement = forwardFromYaw(actor.yaw).multiplyScalar(forward * actor.speed * speedBoost * dt);
+  const movement = forwardFromYaw(actor.yaw).multiplyScalar(forward * actor.speed * dt);
   tryMoveActor(actor, movement);
-}
-
-function updateSeekerAi(dt: number, visible: boolean) {
-  const target = visible || seeker.position.distanceTo(hider.position) < 9 ? hider.position : seekerPatrol[seekerPatrolIndex];
-  turnToward(seeker, angleToward(seeker.position, target), dt, visible ? 1.65 : 1);
-  const distance = seeker.position.distanceTo(target);
-  if (!visible && distance < 1.8) {
-    seekerPatrolIndex = (seekerPatrolIndex + 1) % seekerPatrol.length;
-  }
-  tryMoveActor(seeker, forwardFromYaw(seeker.yaw).multiplyScalar((visible ? SEEKER_SPEED : SEEKER_SPEED * 0.72) * dt));
 }
 
 function chooseHidingSpot() {
@@ -743,8 +710,7 @@ function updateHiderAi(dt: number, visible: boolean, footstepLevel: number) {
 }
 
 function updateCameras() {
-  updateFollowCamera(seekerCamera, seeker, 5.0, 2.6, 9.0);
-  updateFollowCamera(hiderCamera, hider, 4.55, 2.45, 8.0);
+  updateFollowCamera(seekerCamera, seeker, 5.1, 2.65, 9.2);
 }
 
 function updateFollowCamera(camera: THREE.PerspectiveCamera, actor: Actor, backDistance: number, height: number, lookAhead: number) {
@@ -773,7 +739,7 @@ function updateHud(visible: boolean, footstepLevel: number, distance: number) {
   if (dom.footstep) dom.footstep.style.width = footstepPercent;
   if (dom.sight) dom.sight.style.width = sightPercent;
   if (dom.timer) dom.timer.textContent = `${Math.floor(elapsed)}s`;
-  if (dom.role) dom.role.textContent = activeRole === 'seeker' ? '鬼' : '隠れる側';
+  if (dom.role) dom.role.textContent = '鬼';
   if (dom.distance) dom.distance.textContent = `${distance.toFixed(1)}m`;
   if (dom.state) {
     dom.state.textContent = caught ? '捕獲' : visible ? '視界内' : footstepLevel > 0.68 ? '足音 大' : footstepLevel > 0.35 ? '足音 中' : '探索中';
@@ -827,13 +793,8 @@ function updateGame(dt: number) {
     return;
   }
 
-  if (activeRole === 'seeker') {
-    updateControlledActor(seeker, dt);
-    updateHiderAi(dt, preliminaryVisible, footstepLevel);
-  } else {
-    updateControlledActor(hider, dt);
-    updateSeekerAi(dt, preliminaryVisible);
-  }
+  updateControlledActor(seeker, dt);
+  updateHiderAi(dt, preliminaryVisible, footstepLevel);
 
   const visible = canSeekerSeeHider();
   spottedTime = THREE.MathUtils.clamp(spottedTime + (visible ? dt : -dt * 0.75), 0, 1.35);
@@ -848,35 +809,25 @@ function updateGame(dt: number) {
   updateHud(visible, footstepLevel, seeker.position.distanceTo(hider.position));
 }
 
-function renderSplitScreen() {
+function renderSeekerView() {
   const width = canvasElement.clientWidth;
   const height = canvasElement.clientHeight;
-  const leftWidth = Math.floor(width / 2);
-  const rightWidth = width - leftWidth;
 
   renderer.setSize(width, height, false);
-  renderer.setScissorTest(true);
+  renderer.setScissorTest(false);
   renderer.clear();
 
-  seekerCamera.aspect = leftWidth / height;
+  seekerCamera.aspect = width / height;
   seekerCamera.updateProjectionMatrix();
-  renderer.setViewport(0, 0, leftWidth, height);
-  renderer.setScissor(0, 0, leftWidth, height);
+  renderer.setViewport(0, 0, width, height);
   renderer.render(scene, seekerCamera);
-
-  hiderCamera.aspect = rightWidth / height;
-  hiderCamera.updateProjectionMatrix();
-  renderer.setViewport(leftWidth, 0, rightWidth, height);
-  renderer.setScissor(leftWidth, 0, rightWidth, height);
-  renderer.render(scene, hiderCamera);
-  renderer.setScissorTest(false);
 }
 
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
   if (ready) {
     updateGame(dt);
-    renderSplitScreen();
+    renderSeekerView();
   }
   requestAnimationFrame(animate);
 }
@@ -884,11 +835,9 @@ function animate() {
 window.addEventListener('keydown', (event) => {
   ensureAudio();
   const key = event.key.toLowerCase();
-  if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(key)) {
+  if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
     event.preventDefault();
   }
-  if (key === '1') setActiveRole('seeker');
-  if (key === '2') setActiveRole('hider');
   if (key === 'r' && ready) resetRound();
   keys.add(key);
 });
@@ -897,14 +846,6 @@ window.addEventListener('keyup', (event) => {
   keys.delete(event.key.toLowerCase());
 });
 
-dom.seekerButton?.addEventListener('click', () => {
-  ensureAudio();
-  setActiveRole('seeker');
-});
-dom.hiderButton?.addEventListener('click', () => {
-  ensureAudio();
-  setActiveRole('hider');
-});
 dom.resetButton?.addEventListener('click', () => {
   ensureAudio();
   if (ready) resetRound();
@@ -914,7 +855,6 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-setActiveRole('seeker');
 buildTown().catch((error) => {
   console.error(error);
 });
